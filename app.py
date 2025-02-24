@@ -1,14 +1,14 @@
-from flask import Flask
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return '¡Hola, esta es mi primera aplicación Flask!'
+@app.route("/")
+def index():
+    return render_template("index.html")
 
-@app.route('/usuario/<nombre>')
-def usuario(nombre):
-    return f'Bienvenido, {Any}!'
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
-if __name__ == '__main__':
-    app.run(debug=True, port=5001)  # Usa el puerto 5001
+if __name__ == "__main__":
+    app.run(debug=True)
