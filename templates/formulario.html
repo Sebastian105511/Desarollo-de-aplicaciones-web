@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Formulario de Entrada</h2>
+<form method="POST" action="/">
+    {{ form.hidden_tag() }}
+    <div>
+        {{ form.nombre.label }}<br>
+        {{ form.nombre(size=30) }}<br>
+        {% for error in form.nombre.errors %}
+            <span style="color: red;">[{{ error }}]</span><br>
+        {% endfor %}
+    </div>
+    <div>
+        {{ form.submit() }}
+    </div>
+</form>
+{% endblock %}
