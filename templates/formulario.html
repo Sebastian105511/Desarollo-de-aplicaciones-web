@@ -1,18 +1,17 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>Formulario de Entrada</h2>
-<form method="POST" action="/">
+<h2>Formulario de Registro</h2>
+<form method="POST">
     {{ form.hidden_tag() }}
-    <div>
+    <p>
         {{ form.nombre.label }}<br>
-        {{ form.nombre(size=30) }}<br>
-        {% for error in form.nombre.errors %}
-            <span style="color: red;">[{{ error }}]</span><br>
-        {% endfor %}
-    </div>
-    <div>
-        {{ form.submit() }}
-    </div>
+        {{ form.nombre }}
+    </p>
+    <p>
+        {{ form.mail.label }}<br>
+        {{ form.mail }}
+    </p>
+    <p>{{ form.submit }}</p>
 </form>
 {% endblock %}
