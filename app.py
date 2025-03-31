@@ -1,55 +1,148 @@
-from flask import Flask, render_template, request, redirect, url_for
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField
-from wtforms.validators import DataRequired, Email
-from Conexion.conexion import obtener_conexion
+from flask import Flask, render_template, request, redirect, url_for, flash
+import mysql.connector
 
+# Configuración de la aplicación Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'mi_clave_secreta'
+app.secret_key = 'clave_secreta'  # Para usar flash messages
+
+# Configuración de conexión a MySQL
+db_config = {
+    'host': 'localhost',
+    'user': 'root',
+    'password': 'Sebas1234',
+    'database': 'desarrollo_web'
+}
 
 
-# Definimos el formulario
-class MiFormulario(FlaskForm):
-    nombre = StringField('Nombre', validators=[DataRequired()])
-    mail = StringField('Email', validators=[DataRequired(), Email()])
-    submit = SubmitField('Enviar')
+# Función para conectar a la base de datos
+def get_db_connection():
+    connection = mysql.connector.connect(**db_config)
+    return connection
 
 
-# Ruta de la página de inicio
+# Ruta principal (Home)
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
-# Ruta del formulario para agregar usuarios
-@app.route('/formulario', methods=['GET', 'POST'])
-def formulario():
-    form = MiFormulario()
-    if form.validate_on_submit():
-        nombre = form.nombre.data
-        mail = form.mail.data
+# Ruta para el formulario de login
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
 
-        conexion = obtener_conexion()
-        cursor = conexion.cursor()
-        cursor.execute("INSERT INTO usuarios (nombre, mail) VALUES (%s, %s)", (nombre, mail))
-        conexion.commit()
-        conexion.close()
+        # Validar el usuario en la base de datos
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        query = "SELECT * FROM usuarios WHERE username = %s AND password = %s"
+        cursor.execute(query, (username, password))
+        user = cursor.fetchone()
+        connection.close()
 
-        return redirect(url_for('usuarios'))
-    return render_template('formulario.html', form=form)
+        if user:
+            flash('Inicio de sesión exitoso', 'success')
+            return redirect(url_for('index'))
+        else:
+            flash('Usuario o contraseña incorrectos', 'danger')
+
+    return render_template('login.html')
 
 
-# Ruta para mostrar la lista de usuarios
+# Ruta para el registro de usuarios
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+
+        # Guardar el usuario en la base de datos
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        query = "INSERT INTO usuarios (username, email, password) VALUES (%s, %s, %s)"
+        cursor.execute(query, (username, email, password))
+        connection.commit()
+        connection.close()
+
+        flash('Usuario registrado con éxito', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('register.html')
+
+
+# Ruta para listar productos
+@app.route('/productos')
+def productos():
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    query = "SELECT * FROM productos"
+    cursor.execute(query)
+    productos = cursor.fetchall()
+    connection.close()
+    return render_template('productos.html', productos=productos)
+
+
+@app.route('/crear', methods=['GET', 'POST'], endpoint='crear')
+def crear_producto():
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio = request.form['precio']
+        stock = request.form['stock']
+        # Aquí iría la lógica para guardar en la base de datos
+        flash('Producto creado con éxito', 'success')
+        return redirect(url_for('productos'))
+    return render_template('formulario.html')
+
+@app.route('/editar/<int:id>', methods=['GET', 'POST'], endpoint='editar')
+def editar_producto(id):
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        precio = request.form['precio']
+        stock = request.form['stock']
+        query = "UPDATE productos SET nombre = %s, precio = %s, stock = %s WHERE id_producto = %s"
+        cursor.execute(query, (nombre, precio, stock, id))
+        connection.commit()
+        connection.close()
+        flash('Producto actualizado con éxito', 'success')
+        return redirect(url_for('productos'))
+
+    query = "SELECT * FROM productos WHERE id_producto = %s"
+    cursor.execute(query, (id,))
+    producto = cursor.fetchone()
+    connection.close()
+    return render_template('formulario.html', producto=producto)
+
+
+# Ruta para eliminar un producto
+@app.route('/eliminar/<int:id>', methods=['GET', 'POST'])
+def eliminar_producto(id):
+    connection = get_db_connection()
+    cursor = connection.cursor()
+    query = "DELETE FROM productos WHERE id_producto = %s"
+    cursor.execute(query, (id,))
+    connection.commit()
+    connection.close()
+    flash('Producto eliminado con éxito', 'success')
+    return redirect(url_for('productos'))
+
+
+# Ruta para listar usuarios
 @app.route('/usuarios')
 def usuarios():
-    conexion = obtener_conexion()
-    cursor = conexion.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM usuarios")
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    query = "SELECT * FROM usuarios"
+    cursor.execute(query)
     usuarios = cursor.fetchall()
-    conexion.close()
-
+    connection.close()
     return render_template('usuarios.html', usuarios=usuarios)
 
 
-if __name__ == "__main__":
+# Iniciar el servidor
+if __name__ == '__main__':
     app.run(debug=True)
